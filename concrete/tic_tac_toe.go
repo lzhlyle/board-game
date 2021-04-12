@@ -19,8 +19,8 @@ func (t *TicTacToe) Board() core.Board {
 
 func (t *TicTacToe) Players() []*core.Player {
 	return []*core.Player{
-		core.NewPlayer("x"),
-		core.NewPlayer("o"),
+		core.NewPlayer("X"),
+		core.NewPlayer("O"),
 	}
 }
 

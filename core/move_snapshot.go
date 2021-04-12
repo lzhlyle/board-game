@@ -1,11 +1,11 @@
 package core
 
 type MoveSnapshot struct {
-	Step   int             // 最后步数，从 0 起计
-	I, J   int             // 最后落子处
-	Player *Player         // 最后落子玩家
-	Board  [][]*PlaySignal // 最后棋盘
-	Pre    *MoveSnapshot   // 上一步
+	Step      int             // 最后步数，从 0 起计
+	I, J      int             // 最后落子处
+	Player    *Player         // 最后落子玩家
+	Board     [][]*PlaySignal // 最后棋盘
+	Pre, Next *MoveSnapshot   // 上一步、下一步
 }
 
 func NewMoveSnapshot(width, height int) *MoveSnapshot {
@@ -17,7 +17,7 @@ func NewMoveSnapshot(width, height int) *MoveSnapshot {
 }
 
 func NewGameSnapshot(step, i, j int, player *Player, pre *MoveSnapshot) *MoveSnapshot {
-	res := &MoveSnapshot{
+	curr := &MoveSnapshot{
 		Step:   step,
 		I:      i,
 		J:      j,
@@ -25,8 +25,9 @@ func NewGameSnapshot(step, i, j int, player *Player, pre *MoveSnapshot) *MoveSna
 		Player: player,
 		Pre:    pre,
 	}
-	res.Board[i][j] = player.signal
-	return res
+	pre.Next = curr
+	curr.Board[i][j] = player.signal
+	return curr
 }
 
 func (s *MoveSnapshot) cloneBoard() [][]*PlaySignal {

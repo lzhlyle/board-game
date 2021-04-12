@@ -17,23 +17,23 @@ type Play struct {
 	snapshot   *MoveSnapshot
 	init       bool // 是否已初始化
 
-	param   BoardGame
+	rule    GameRule
 	board   Board
 	players []*Player
 }
 
-func NewPlay(param BoardGame) *Play {
+func NewPlay(bg BoardGame) *Play {
 	return (&Play{
-		param:   param,
-		board:   param.Board(),
-		players: param.Players(),
+		rule:    bg,
+		board:   bg.Board(),
+		players: bg.Players(),
 	}).reset()
 }
 
 func (p *Play) reset() *Play {
 	p.step = 0
 	p.gameState = GameState_Ready
-	p.currPlayer = p.param.Players()[0]
+	p.currPlayer = p.players[0]
 	p.snapshot = NewMoveSnapshot(p.board.Width, p.board.Height)
 	p.init = false
 	return p
@@ -50,6 +50,9 @@ func (p *Play) Play() {
 	g.Mouse = true
 
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, p.quit); err != nil {
+		log.Panicln(err)
+	}
+	if err := g.SetKeybinding("", gocui.KeyCtrlR, gocui.ModNone, p.restart); err != nil {
 		log.Panicln(err)
 	}
 	if err := g.SetKeybinding("", gocui.MouseLeft, gocui.ModNone, p.move); err != nil {
@@ -70,8 +73,8 @@ var (
 			frame:     true,
 		},
 		MoveLocStyle_InCross: {
-			defStr:    "- | -",
-			locStrFmt: "- %s -",
+			defStr:    "——|——",
+			locStrFmt: "——%s——",
 			side:      2,
 			frame:     false,
 		},
@@ -88,7 +91,7 @@ func (p *Play) layout(g *gocui.Gui) error {
 	// x坐标：左右，y坐标：上下
 	side := painting.side
 	maxX, maxY := g.Size()
-	x0, y0 := maxX/2-6*side, maxY/2-2*side
+	x0, y0 := maxX/2-6*(p.board.Width/2), maxY/2-2*(p.board.Height/2)
 
 	for x := 0; x < p.board.Width; x++ {
 		for y := 0; y < p.board.Height; y++ {
@@ -136,14 +139,14 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 	p.snapshot = NewGameSnapshot(p.step, i, j, p.currPlayer, p.snapshot)
 
 	g.Update(func(gui *gocui.Gui) error {
-		end, winner := p.param.GameEnd(p.snapshot)
+		end, winner := p.rule.GameEnd(p.snapshot)
 		if end {
 			return p.win(g, winner)
 		}
 		return nil
 	})
 
-	if p.param.RoundEnd(p.snapshot) {
+	if p.rule.RoundEnd(p.snapshot) {
 		p.step++
 		p.currPlayer = p.players[p.step%len(p.players)]
 	}
@@ -154,13 +157,12 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 func (p *Play) win(g *gocui.Gui, winner *Player) error {
 	p.gameState = GameState_End
 	time.Sleep(500 * time.Millisecond)
-	x0, y0, x1, y1, err := g.ViewPosition("cell-1-1")
+
+	x0, y0, x1, y1, err := p.calcWinViewLocation(p.board.Width, p.board.Height, g)
 	if err != nil {
 		return err
 	}
-
-	dx, dy := (x1-x0)/2, (y1-y0)/2
-	v, err := g.SetView("win", x0-dx, y0-dy, x1+dx, y1+dy)
+	v, err := g.SetView("win", x0, y0, x1, y1)
 	if err != nil && err != gocui.ErrUnknownView {
 		return err
 	}
@@ -174,6 +176,56 @@ func (p *Play) win(g *gocui.Gui, winner *Player) error {
 	_ = g.SetKeybinding("", gocui.KeyEnter, gocui.ModNone, p.restart)
 	_, _ = g.SetCurrentView(v.Name())
 	return nil
+}
+
+func (p *Play) calcWinViewLocation(w, h int, g *gocui.Gui) (wx0, wy0, wx1, wy1 int, err error) {
+	// center left-top
+	ltname := fmt.Sprintf("cell-%d-%d", (h-1)/2, (w-1)/2)
+	xc0, yc0, xc1, yc1, err := g.ViewPosition(ltname)
+	if err != nil {
+		return
+	}
+	if (w&1) == 0 || (h&1) == 0 {
+		// center right-bottom
+		rbname := fmt.Sprintf("cell-%d-%d", (h^1)/2, (w^1)/2)
+		_, _, xc1, yc1, err = g.ViewPosition(rbname)
+		if err != nil {
+			return
+		}
+	}
+	// center: from (xc0, yc0) to (xc1, yc1)
+
+	// left-top cell
+	x0, y0, _, _, err := g.ViewPosition("cell-0-0")
+	if err != nil {
+		return
+	}
+
+	// right-bottom cell
+	_, _, x1, y1, err := g.ViewPosition(fmt.Sprintf("cell-%d-%d", h-1, w-1))
+	if err != nil {
+		return
+	}
+
+	// calculate delta
+	dx0, dy0 := (xc0-x0)/2, (yc0-y0)/2
+	// adjust
+	if dx0 == xc0-x0 {
+		dx0 = (xc1 - xc0) / 2
+	}
+	if dy0 == yc0-y0 {
+		dy0 = (yc1 - yc0) / 2
+	}
+	dx1, dy1 := (x1-xc1)/2, (y1-yc1)/2
+	// adjust
+	if dx1 == x1-xc1 {
+		dx1 = (xc1 - xc0) / 2
+	}
+	if dy1 == y1-yc1 {
+		dy1 = (yc1 - yc0) / 2
+	}
+
+	return xc0 - dx0, yc0 - dy0, xc1 + dx1, yc1 + dy1, nil
 }
 
 func (p *Play) restart(g *gocui.Gui, v *gocui.View) error {
