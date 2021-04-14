@@ -2,13 +2,13 @@ package core
 
 // 单个玩家
 type Player struct {
-	signal *PlaySignal
+	Signal *PlaySignal
 	state  PlayState
 }
 
 func NewPlayer(tag string) *Player {
 	return &Player{
-		signal: &PlaySignal{
+		Signal: &PlaySignal{
 			Tag: tag,
 		},
 		state: PlayState_Ready,

@@ -5,25 +5,38 @@ import (
 )
 
 type Gobang struct {
+	board   *core.Board
+	players []*core.Player
 }
 
 func NewGobang() *Gobang {
-	return &Gobang{}
+	return &Gobang{
+		board: &core.Board{
+			Width:        15,
+			Height:       15,
+			MoveLocStyle: core.MoveLocStyle_InCross,
+		},
+		players: []*core.Player{
+			core.NewPlayer("X"),
+			core.NewPlayer("O"),
+		},
+	}
 }
 
-func (g *Gobang) Board() core.Board {
-	return core.Board{
-		Width:        15,
-		Height:       15,
-		MoveLocStyle: core.MoveLocStyle_InCross,
-	}
+func (g *Gobang) Compress(mat [][]*core.PlaySignal) interface{} {
+	panic("implement me")
+}
+
+func (g *Gobang) GenSimilar(base [][]*core.PlaySignal) interface{} {
+	panic("implement me")
+}
+
+func (g *Gobang) Board() *core.Board {
+	return g.board
 }
 
 func (g *Gobang) Players() []*core.Player {
-	return []*core.Player{
-		core.NewPlayer("X"),
-		core.NewPlayer("O"),
-	}
+	return g.players
 }
 
 func (g *Gobang) RoundEnd(snapshot *core.MoveSnapshot) bool {

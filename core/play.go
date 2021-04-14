@@ -17,16 +17,18 @@ type Play struct {
 	snapshot   *MoveSnapshot
 	init       bool // 是否已初始化
 
-	rule    GameRule
-	board   Board
-	players []*Player
+	rule       IGameRule
+	board      *Board
+	players    []*Player
+	compressor ICompress
 }
 
 func NewPlay(bg BoardGame) *Play {
 	return (&Play{
-		rule:    bg,
-		board:   bg.Board(),
-		players: bg.Players(),
+		rule:       bg,
+		board:      bg.Board(),
+		players:    bg.Players(),
+		compressor: bg,
 	}).reset()
 }
 
@@ -131,7 +133,7 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	}
 
-	signal := p.currPlayer.signal.Tag
+	signal := p.currPlayer.Signal.Tag
 	v.Clear()
 	_, _ = fmt.Fprintf(v, painting.locStrFmt, signal)
 
@@ -168,7 +170,7 @@ func (p *Play) win(g *gocui.Gui, winner *Player) error {
 	}
 
 	if winner != nil {
-		_, _ = fmt.Fprintf(v, "%s win!", winner.signal.Tag)
+		_, _ = fmt.Fprintf(v, "%s win!", winner.Signal.Tag)
 	} else {
 		_, _ = fmt.Fprint(v, "draw!")
 	}

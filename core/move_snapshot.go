@@ -26,7 +26,7 @@ func NewGameSnapshot(step, i, j int, player *Player, pre *MoveSnapshot) *MoveSna
 		Pre:    pre,
 	}
 	pre.Next = curr
-	curr.Board[i][j] = player.signal
+	curr.Board[i][j] = player.Signal
 	return curr
 }
 

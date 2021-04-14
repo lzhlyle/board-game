@@ -3,18 +3,24 @@ package core
 type BoardGame interface {
 	IBoard
 	IPlayerCollection
-	GameRule
+	IGameRule
+	ICompress
+}
+
+type ICompress interface {
+	Compress(mat [][]*PlaySignal) interface{}
+	GenSimilar(base [][]*PlaySignal) interface{}
 }
 
 type IBoard interface {
-	Board() Board
+	Board() *Board
 }
 
 type IPlayerCollection interface {
 	Players() []*Player
 }
 
-type GameRule interface {
+type IGameRule interface {
 	RoundEnd(snapshot *MoveSnapshot) bool
 	GameEnd(snapshot *MoveSnapshot) (end bool, winner *Player)
 }
