@@ -17,18 +17,16 @@ type Play struct {
 	snapshot   *MoveSnapshot
 	init       bool // 是否已初始化
 
-	rule       IGameRule
-	board      *Board
-	players    []*Player
-	compressor ICompress
+	rule    IGameRule
+	board   *Board
+	players []*Player
 }
 
 func NewPlay(bg BoardGame) *Play {
 	return (&Play{
-		rule:       bg,
-		board:      bg.Board(),
-		players:    bg.Players(),
-		compressor: bg,
+		rule:    bg,
+		board:   bg.Board(),
+		players: bg.Players(),
 	}).reset()
 }
 

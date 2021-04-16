@@ -27,7 +27,7 @@ func (g *Gobang) Compress(mat [][]*core.PlaySignal) interface{} {
 	panic("implement me")
 }
 
-func (g *Gobang) GenSimilar(base [][]*core.PlaySignal) interface{} {
+func (g *Gobang) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
 	panic("implement me")
 }
 

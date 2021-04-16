@@ -1,6 +1,9 @@
 package concrete
 
-import "board-game/core"
+import (
+	"board-game/ai"
+	"board-game/core"
+)
 
 type TicTacToe struct {
 	board   *core.Board
@@ -45,29 +48,17 @@ func (t *TicTacToe) Compress(mat [][]*core.PlaySignal) interface{} {
 // 旋转 90度，共 4 种
 // 左右翻转后，90度，共 4 种
 // 最多共 8 种，还需从中去重
-func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) interface{} {
+func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
 	m := make(map[int32]int8, 8)          // 去重用
 	mats := [2][][]*core.PlaySignal{base} // 翻转前后 2 种
-
-	// 旋转 90 度: \-
-	spin := func(mat [][]*core.PlaySignal) [][]*core.PlaySignal {
-		for i, row := range mat {
-			for j := range row {
-				if i < j {
-					mat[i][j], mat[j][i] = mat[j][i], mat[i][j]
-				}
-			}
-			for l, r := 0, len(row); l < r; {
-				row[l], row[r] = row[r], row[l]
-			}
-		}
-		return mat
-	}
 
 	for _, mat := range mats {
 		m[t.Compress(mat).(int32)] = 0
 		for i := 0; i < 3; i++ {
-			mat = spin(mat)
+			mat, err := ai.Spin90(mat)
+			if err != nil {
+				return int32(0), err
+			}
 			m[t.Compress(mat).(int32)] = 0
 		}
 	}
@@ -76,7 +67,7 @@ func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) interface{} {
 	for sml := range m {
 		res = append(res, sml)
 	}
-	return res
+	return res, nil
 }
 
 func (t *TicTacToe) Board() *core.Board {
