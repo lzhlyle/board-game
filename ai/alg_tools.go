@@ -4,8 +4,8 @@ import (
 	"board-game/core"
 )
 
-// Spin90 旋转 90 度
-func Spin90(mat [][]*core.PlaySignal) ([][]*core.PlaySignal, error) {
+// SpinSquare90 旋转 90 度
+func SpinSquare90(mat [][]*core.PlaySignal) ([][]*core.PlaySignal, error) {
 	if len(mat) == 0 {
 		return mat, nil
 	}
@@ -13,10 +13,12 @@ func Spin90(mat [][]*core.PlaySignal) ([][]*core.PlaySignal, error) {
 		return nil, ErrNotSquare
 	}
 
-	for i, row := range mat {
+	res := core.CloneMatrix(mat)
+
+	for i, row := range res {
 		for j := range row {
 			if i < j {
-				mat[i][j], mat[j][i] = mat[j][i], mat[i][j]
+				res[i][j], res[j][i] = res[j][i], res[i][j]
 			}
 		}
 		for l, r := 0, len(row)-1; l < r; {
@@ -25,5 +27,18 @@ func Spin90(mat [][]*core.PlaySignal) ([][]*core.PlaySignal, error) {
 			r--
 		}
 	}
-	return mat, nil
+	return res, nil
+}
+
+// FlipLR 左右翻转
+func FlipLR(mat [][]*core.PlaySignal) [][]*core.PlaySignal {
+	res := core.CloneMatrix(mat)
+	for _, row := range res {
+		for l, r := 0, len(row)-1; l < r; {
+			row[l], row[r] = row[r], row[l]
+			l++
+			r--
+		}
+	}
+	return res
 }

@@ -21,22 +21,11 @@ func NewGameSnapshot(step, i, j int, player *Player, pre *MoveSnapshot) *MoveSna
 		Step:   step,
 		I:      i,
 		J:      j,
-		Board:  pre.cloneBoard(),
+		Board:  CloneMatrix(pre.Board),
 		Player: player,
 		Pre:    pre,
 	}
 	pre.Next = curr
 	curr.Board[i][j] = player.Signal
 	return curr
-}
-
-func (s *MoveSnapshot) cloneBoard() [][]*PlaySignal {
-	res := make([][]*PlaySignal, len(s.Board))
-	for i, row := range s.Board {
-		res[i] = make([]*PlaySignal, len(row))
-		for j, ps := range row {
-			res[i][j] = ps
-		}
-	}
-	return res
 }

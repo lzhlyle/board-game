@@ -3,6 +3,7 @@ package concrete
 import (
 	"board-game/ai"
 	"board-game/core"
+	"sort"
 )
 
 type TicTacToe struct {
@@ -52,13 +53,12 @@ func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
 	m := make(map[int32]int8, 8)          // 去重用
 	mats := [2][][]*core.PlaySignal{base} // 翻转前后 2 种
 
+	mats[1] = ai.FlipLR(base) // 翻转
+	
 	for _, mat := range mats {
 		m[t.Compress(mat).(int32)] = 0
 		for i := 0; i < 3; i++ {
-			mat, err := ai.Spin90(mat)
-			if err != nil {
-				return int32(0), err
-			}
+			mat, _ = ai.SpinSquare90(mat)
 			m[t.Compress(mat).(int32)] = 0
 		}
 	}
@@ -67,6 +67,9 @@ func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
 	for sml := range m {
 		res = append(res, sml)
 	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i] < res[j]
+	})
 	return res, nil
 }
 

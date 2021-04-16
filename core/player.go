@@ -29,3 +29,14 @@ const (
 	PlayState_Victory                        // 已胜利
 	PlayState_Over                           // 已失败
 )
+
+func CloneMatrix(mat [][]*PlaySignal) [][]*PlaySignal {
+	res := make([][]*PlaySignal, len(mat))
+	for i, row := range mat {
+		res[i] = make([]*PlaySignal, len(row))
+		for j, ps := range row {
+			res[i][j] = ps
+		}
+	}
+	return res
+}

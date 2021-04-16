@@ -88,13 +88,13 @@ func TestSpin90(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Spin90(tt.args.mat)
+			got, err := SpinSquare90(tt.args.mat)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Spin90() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("SpinSquare90() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Spin90() got = %v, want %v", got, tt.want)
+				t.Errorf("SpinSquare90() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
