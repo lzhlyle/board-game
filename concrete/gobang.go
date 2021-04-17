@@ -23,6 +23,10 @@ func NewGobang() *Gobang {
 	}
 }
 
+func (g *Gobang) GameStart(lastStarter *core.Player, winner *core.Player, players []*core.Player, player2Idx map[*core.Player]int) *core.Player {
+	return players[0]
+}
+
 func (g *Gobang) Compress(mat [][]*core.PlaySignal) interface{} {
 	panic("implement me")
 }

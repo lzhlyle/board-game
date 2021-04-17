@@ -1,8 +1,9 @@
 package core
 
-// 单个玩家
+// Player 单个玩家
 type Player struct {
 	Signal *PlaySignal
+	ai     bool
 	state  PlayState
 }
 
@@ -11,16 +12,27 @@ func NewPlayer(tag string) *Player {
 		Signal: &PlaySignal{
 			Tag: tag,
 		},
+		ai:    false,
 		state: PlayState_Ready,
 	}
 }
 
-// 玩家标识
+func NewAIPlayer(tag string) *Player {
+	return &Player{
+		Signal: &PlaySignal{
+			Tag: tag,
+		},
+		ai:    true,
+		state: PlayState_Ready,
+	}
+}
+
+// PlaySignal 玩家标识
 type PlaySignal struct {
 	Tag string
 }
 
-// 玩家状态
+// PlayState 玩家状态
 type PlayState int8
 
 const (

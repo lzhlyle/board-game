@@ -3,8 +3,6 @@ package core
 import (
 	"fmt"
 	"log"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jroimartin/gocui"
@@ -17,23 +15,41 @@ type Play struct {
 	snapshot   *MoveSnapshot
 	init       bool // 是否已初始化
 
-	rule    IGameRule
-	board   *Board
-	players []*Player
+	starter *Player
+	winner  *Player
+
+	rule       IGameRule
+	board      *Board
+	players    []*Player
+	player2Idx map[*Player]int
+
+	hook Hook
 }
 
 func NewPlay(bg BoardGame) *Play {
-	return (&Play{
-		rule:    bg,
-		board:   bg.Board(),
-		players: bg.Players(),
-	}).reset()
+	res := &Play{
+		rule:       bg,
+		board:      bg.Board(),
+		players:    bg.Players(),
+		player2Idx: make(map[*Player]int, len(bg.Players())),
+	}
+	for i, player := range res.players {
+		res.player2Idx[player] = i
+	}
+	if v, ok := bg.(Hook); ok {
+		res.hook = v
+	}
+	return res.reset()
 }
 
 func (p *Play) reset() *Play {
 	p.step = 0
 	p.gameState = GameState_Ready
-	p.currPlayer = p.players[0]
+
+	p.currPlayer = p.rule.GameStart(p.starter, p.winner, p.players, p.player2Idx)
+	p.starter = p.currPlayer
+	p.winner = nil
+
 	p.snapshot = NewMoveSnapshot(p.board.Width, p.board.Height)
 	p.init = false
 	return p
@@ -48,6 +64,7 @@ func (p *Play) Play() {
 
 	g.SetManagerFunc(p.layout)
 	g.Mouse = true
+	g.InputEsc = true
 
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, p.quit); err != nil {
 		log.Panicln(err)
@@ -59,27 +76,20 @@ func (p *Play) Play() {
 		log.Panicln(err)
 	}
 
+	p.moveIfAI(g)
+
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
 }
 
-var (
-	moveLocStyleMap = map[MoveLocStyle]*MoveLocStylePainting{
-		MoveLocStyle_InCell: {
-			defStr:    "   ",
-			locStrFmt: "  %s",
-			side:      2,
-			frame:     true,
-		},
-		MoveLocStyle_InCross: {
-			defStr:    "——|——",
-			locStrFmt: "——%s——",
-			side:      2,
-			frame:     false,
-		},
+func (p *Play) moveIfAI(g *gocui.Gui) {
+	if p.currPlayer.ai && p.hook != nil {
+		if fn := p.hook.AIMove(p.snapshot, p.move); fn != nil {
+			g.Update(fn)
+		}
 	}
-)
+}
 
 func (p *Play) layout(g *gocui.Gui) error {
 	if p.init {
@@ -95,7 +105,7 @@ func (p *Play) layout(g *gocui.Gui) error {
 
 	for x := 0; x < p.board.Width; x++ {
 		for y := 0; y < p.board.Height; y++ {
-			name := p.cellToName(y, x) // (y, x) 即 (i, j)
+			name := CellToName(y, x) // (y, x) 即 (i, j)
 			v, err := g.SetView(name, x0+x*3*side, y0+y*side, x0+x*3*side+3*side, y0+y*side+side)
 			if err != nil && err != gocui.ErrUnknownView {
 				return err
@@ -106,17 +116,6 @@ func (p *Play) layout(g *gocui.Gui) error {
 	}
 	p.init = true
 	return nil
-}
-
-func (p *Play) cellToName(i, j int) string {
-	return fmt.Sprintf("cell-%d-%d", i, j)
-}
-
-func (p *Play) nameToCell(name string) (i, j int) {
-	arr := strings.Split(name, "-")
-	i, _ = strconv.Atoi(arr[1])
-	j, _ = strconv.Atoi(arr[2])
-	return
 }
 
 func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
@@ -135,10 +134,10 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 	v.Clear()
 	_, _ = fmt.Fprintf(v, painting.locStrFmt, signal)
 
-	i, j := p.nameToCell(v.Name())
+	i, j := NameToCell(v.Name())
 	p.snapshot = NewGameSnapshot(p.step, i, j, p.currPlayer, p.snapshot)
 
-	g.Update(func(gui *gocui.Gui) error {
+	g.Update(func(g *gocui.Gui) error {
 		end, winner := p.rule.GameEnd(p.snapshot)
 		if end {
 			return p.win(g, winner)
@@ -146,19 +145,22 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 		return nil
 	})
 
+	p.step++
 	if p.rule.RoundEnd(p.snapshot) {
-		p.step++
-		p.currPlayer = p.players[p.step%len(p.players)]
+		p.currPlayer = p.players[(p.player2Idx[p.currPlayer]+1)%len(p.players)]
 	}
+
+	p.moveIfAI(g)
 
 	return nil
 }
 
 func (p *Play) win(g *gocui.Gui, winner *Player) error {
+	p.winner = winner
 	p.gameState = GameState_End
 	time.Sleep(500 * time.Millisecond)
 
-	x0, y0, x1, y1, err := p.calcWinViewLocation(p.board.Width, p.board.Height, g)
+	x0, y0, x1, y1, err := calcWinViewLocation(p.board.Width, p.board.Height, g)
 	if err != nil {
 		return err
 	}
@@ -174,58 +176,13 @@ func (p *Play) win(g *gocui.Gui, winner *Player) error {
 	}
 
 	_ = g.SetKeybinding("", gocui.KeyEnter, gocui.ModNone, p.restart)
+	_ = g.SetKeybinding("", gocui.KeyEsc, gocui.ModNone, func(g *gocui.Gui, v *gocui.View) error {
+		_ = g.DeleteView(v.Name())
+		_ = g.DeleteKeybinding("", gocui.KeyEsc, gocui.ModNone)
+		return nil
+	})
 	_, _ = g.SetCurrentView(v.Name())
 	return nil
-}
-
-func (p *Play) calcWinViewLocation(w, h int, g *gocui.Gui) (wx0, wy0, wx1, wy1 int, err error) {
-	// center left-top
-	ltname := fmt.Sprintf("cell-%d-%d", (h-1)/2, (w-1)/2)
-	xc0, yc0, xc1, yc1, err := g.ViewPosition(ltname)
-	if err != nil {
-		return
-	}
-	if (w&1) == 0 || (h&1) == 0 {
-		// center right-bottom
-		rbname := fmt.Sprintf("cell-%d-%d", (h^1)/2, (w^1)/2)
-		_, _, xc1, yc1, err = g.ViewPosition(rbname)
-		if err != nil {
-			return
-		}
-	}
-	// center: from (xc0, yc0) to (xc1, yc1)
-
-	// left-top cell
-	x0, y0, _, _, err := g.ViewPosition("cell-0-0")
-	if err != nil {
-		return
-	}
-
-	// right-bottom cell
-	_, _, x1, y1, err := g.ViewPosition(fmt.Sprintf("cell-%d-%d", h-1, w-1))
-	if err != nil {
-		return
-	}
-
-	// calculate delta
-	dx0, dy0 := (xc0-x0)/2, (yc0-y0)/2
-	// adjust
-	if dx0 == xc0-x0 {
-		dx0 = (xc1 - xc0) / 2
-	}
-	if dy0 == yc0-y0 {
-		dy0 = (yc1 - yc0) / 2
-	}
-	dx1, dy1 := (x1-xc1)/2, (y1-yc1)/2
-	// adjust
-	if dx1 == x1-xc1 {
-		dx1 = (xc1 - xc0) / 2
-	}
-	if dy1 == y1-yc1 {
-		dy1 = (yc1 - yc0) / 2
-	}
-
-	return xc0 - dx0, yc0 - dy0, xc1 + dx1, yc1 + dy1, nil
 }
 
 func (p *Play) restart(g *gocui.Gui, v *gocui.View) error {
@@ -233,8 +190,11 @@ func (p *Play) restart(g *gocui.Gui, v *gocui.View) error {
 	for _, v := range g.Views() {
 		v.Clear()
 	}
-	p.reset()
 	_ = g.DeleteKeybinding("", gocui.KeyEnter, gocui.ModNone)
+	p.reset()
+
+	p.moveIfAI(g)
+
 	return nil
 }
 

@@ -3,12 +3,20 @@ package concrete
 import (
 	"board-game/ai"
 	"board-game/core"
+	"github.com/jroimartin/gocui"
+	"math/rand"
 	"sort"
+	"time"
 )
 
 type TicTacToe struct {
 	board   *core.Board
 	players []*core.Player
+
+	// Alg
+	curr2Ld      map[int32]int32
+	ld2Similar   map[int32][]int32
+	ld2NextRates map[int32][]ai.NextRates
 }
 
 func NewTicTacToe() *TicTacToe {
@@ -19,9 +27,52 @@ func NewTicTacToe() *TicTacToe {
 			MoveLocStyle: core.MoveLocStyle_InCell,
 		},
 		players: []*core.Player{
-			core.NewPlayer("X"),
-			core.NewPlayer("O"),
+			core.NewAIPlayer("X"),
+			core.NewAIPlayer("O"),
 		},
+	}
+}
+
+func (t *TicTacToe) GameStart(lastStarter *core.Player, winner *core.Player, players []*core.Player, player2Idx map[*core.Player]int) *core.Player {
+	if lastStarter == nil {
+		return players[0]
+	}
+
+	// 轮流开局
+	return players[(player2Idx[lastStarter]+1)%len(players)]
+}
+
+func (t *TicTacToe) Select(curr [][]*core.PlaySignal) (i, j int, err error) {
+	optionals := make([][2]int, 0)
+	for i := range curr {
+		for j := range curr[i] {
+			if curr[i][j] == nil {
+				optionals = append(optionals, [2]int{i, j})
+			}
+		}
+	}
+	if len(optionals) == 0 {
+		return -1, -1, ai.ErrCannotMove
+	}
+	res := optionals[rand.Intn(len(optionals))]
+	return res[0], res[1], nil
+}
+
+func (t *TicTacToe) AIMove(snapshot *core.MoveSnapshot, moveFn core.MoveFn) core.UpdateFn {
+	return func(g *gocui.Gui) error {
+		i, j, err := t.Select(snapshot.Board)
+		if err == ai.ErrCannotMove {
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		v, err := g.View(core.CellToName(i, j))
+		if err != nil {
+			return err
+		}
+		time.Sleep(100 * time.Millisecond)
+		return moveFn(g, v)
 	}
 }
 
@@ -54,7 +105,7 @@ func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
 	mats := [2][][]*core.PlaySignal{base} // 翻转前后 2 种
 
 	mats[1] = ai.FlipLR(base) // 翻转
-	
+
 	for _, mat := range mats {
 		m[t.Compress(mat).(int32)] = 0
 		for i := 0; i < 3; i++ {
