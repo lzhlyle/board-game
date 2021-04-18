@@ -14,8 +14,8 @@ type TicTacToe struct {
 	players []*core.Player
 
 	// Alg
-	curr2Ld      map[int32]int32
-	ld2NextRates map[int32][]ai.NextRates
+	//curr2Ld map[int32]*ai.Similar
+	curr2NextRates map[int32][]ai.NextRates
 }
 
 func NewTicTacToe() *TicTacToe {
@@ -35,6 +35,7 @@ func NewTicTacToe() *TicTacToe {
 func (t *TicTacToe) buildChessRecord() *TicTacToe {
 	panic("implement me")
 	// doing @lzh build chess record
+
 }
 
 type AIStrategy int
@@ -57,8 +58,9 @@ func (t *TicTacToe) GameStart(lastStarter *core.Player, winner *core.Player, pla
 func (t *TicTacToe) Calculate(curr [][]*core.PlaySignal) (i, j int, err error) {
 	// highest win strategy
 	currZip := t.Zip(curr).(int32)
-	ld := t.curr2Ld[currZip]
-	rates := t.ld2NextRates[ld]
+	//ldSimilar := t.curr2Ld[currZip]
+	//ldZip := ldSimilar.Zip.(int32)
+	rates := t.curr2NextRates[currZip]
 	// 策略优先级排序
 	sort.Slice(rates, func(i, j int) bool {
 		return rates[i].Rates[0] > rates[j].Rates[0]
@@ -139,29 +141,33 @@ func (t *TicTacToe) Zip(mat [][]*core.PlaySignal) interface{} {
 // 旋转 90度，共 4 种
 // 左右翻转后，90度，共 4 种
 // 最多共 8 种，还需从中去重
-func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
-	m := make(map[int32]int8, 8)          // 去重用
-	mats := [2][][]*core.PlaySignal{base} // 翻转前后 2 种
-
-	mats[1] = ai.FlipLR(base) // 翻转
-
-	for _, mat := range mats {
-		m[t.Zip(mat).(int32)] = 0
-		for i := 0; i < 3; i++ {
-			mat, _ = ai.SpinSquare90(mat)
-			m[t.Zip(mat).(int32)] = 0
-		}
-	}
-
-	res := make([]int32, 0, len(m))
-	for sml := range m {
-		res = append(res, sml)
-	}
-	sort.Slice(res, func(i, j int) bool {
-		return res[i] < res[j]
-	})
-	return res, nil
-}
+//func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) ([]*ai.Similar, error) {
+//	m := make(map[int32]*ai.Similar, 8)   // 去重用
+//	mats := [2][][]*core.PlaySignal{base} // 翻转前后 2 种
+//
+//	mats[1] = ai.FlipLR(base) // 翻转
+//
+//	for flip, mat := range mats {
+//		zip := t.Zip(mat).(int32)
+//		m[zip] = ai.NewSimilar(zip, flip == 1, ai.Angle0)
+//		for i := 0; i < 3; i++ {
+//			mat, _ = ai.SpinSquare90(mat)
+//			iZip := t.Zip(mat).(int32)
+//			if _, ok := m[iZip]; !ok {
+//				m[iZip] = ai.NewSimilar(iZip, flip == 1, ai.Angle(i))
+//			}
+//		}
+//	}
+//
+//	res := make([]*ai.Similar, 0, len(m))
+//	for _, similar := range m {
+//		res = append(res, similar)
+//	}
+//	sort.Slice(res, func(i, j int) bool {
+//		return res[i].Zip.(int32) < res[j].Zip.(int32)
+//	})
+//	return res, nil
+//}
 
 func (t *TicTacToe) Board() *core.Board {
 	return t.board
