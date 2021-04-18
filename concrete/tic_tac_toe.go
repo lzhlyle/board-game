@@ -15,12 +15,11 @@ type TicTacToe struct {
 
 	// Alg
 	curr2Ld      map[int32]int32
-	ld2Similar   map[int32][]int32
 	ld2NextRates map[int32][]ai.NextRates
 }
 
 func NewTicTacToe() *TicTacToe {
-	return &TicTacToe{
+	return (&TicTacToe{
 		board: &core.Board{
 			Width:        3,
 			Height:       3,
@@ -30,8 +29,21 @@ func NewTicTacToe() *TicTacToe {
 			core.NewAIPlayer("X"),
 			core.NewAIPlayer("O"),
 		},
-	}
+	}).buildChessRecord()
 }
+
+func (t *TicTacToe) buildChessRecord() *TicTacToe {
+	panic("implement me")
+	// doing @lzh build chess record
+}
+
+type AIStrategy int
+
+const (
+	AIStrategyRandom AIStrategy = 1 + iota
+	AIStrategyHighestWin
+	AIStrategyLowestLose
+)
 
 func (t *TicTacToe) GameStart(lastStarter *core.Player, winner *core.Player, players []*core.Player, player2Idx map[*core.Player]int) *core.Player {
 	if lastStarter == nil {
@@ -42,25 +54,52 @@ func (t *TicTacToe) GameStart(lastStarter *core.Player, winner *core.Player, pla
 	return players[(player2Idx[lastStarter]+1)%len(players)]
 }
 
-func (t *TicTacToe) Select(curr [][]*core.PlaySignal) (i, j int, err error) {
-	optionals := make([][2]int, 0)
-	for i := range curr {
-		for j := range curr[i] {
-			if curr[i][j] == nil {
-				optionals = append(optionals, [2]int{i, j})
-			}
+func (t *TicTacToe) Calculate(curr [][]*core.PlaySignal) (i, j int, err error) {
+	// highest win strategy
+	currZip := t.Zip(curr).(int32)
+	ld := t.curr2Ld[currZip]
+	rates := t.ld2NextRates[ld]
+	// 策略优先级排序
+	sort.Slice(rates, func(i, j int) bool {
+		return rates[i].Rates[0] > rates[j].Rates[0]
+	})
+	// 选同结果的多种走法
+	nextZip := rates[0].NextZip.(int32) // 默认
+	for i := 1; i < len(rates); i++ {
+		if rates[i].Rates[0] != rates[i-1].Rates[0] {
+			nextZip = rates[rand.Intn(i)].NextZip.(int32)
 		}
 	}
-	if len(optionals) == 0 {
-		return -1, -1, ai.ErrCannotMove
+	// 确定差异
+	diff := currZip ^ nextZip
+	// 求差异的格子值
+	cell := 0
+	for diff > 0 { // 最多 9 次
+		diff >>= 2 // 2 = len(players)
+		cell++
 	}
-	res := optionals[rand.Intn(len(optionals))]
-	return res[0], res[1], nil
+	// 确定格子的点位
+	return cell / 3, cell % 3, nil
+
+	// random strategy
+	//optionals := make([][2]int, 0)
+	//for i := range curr {
+	//	for j := range curr[i] {
+	//		if curr[i][j] == nil {
+	//			optionals = append(optionals, [2]int{i, j})
+	//		}
+	//	}
+	//}
+	//if len(optionals) == 0 {
+	//	return -1, -1, ai.ErrCannotMove
+	//}
+	//res := optionals[rand.Intn(len(optionals))]
+	//return res[0], res[1], nil
 }
 
 func (t *TicTacToe) AIMove(snapshot *core.MoveSnapshot, moveFn core.MoveFn) core.UpdateFn {
 	return func(g *gocui.Gui) error {
-		i, j, err := t.Select(snapshot.Board)
+		i, j, err := t.Calculate(snapshot.Board)
 		if err == ai.ErrCannotMove {
 			return nil
 		} else if err != nil {
@@ -81,7 +120,7 @@ func (t *TicTacToe) AIMove(snapshot *core.MoveSnapshot, moveFn core.MoveFn) core
 // 共9个格子，每个格子3种情况
 // 2个位可表示4种情况(00, 01, 10, 11)
 // 18个位即可表示一个棋盘，返回 int32
-func (t *TicTacToe) Compress(mat [][]*core.PlaySignal) interface{} {
+func (t *TicTacToe) Zip(mat [][]*core.PlaySignal) interface{} {
 	res := int32(0b_00_00_00_00_00_00_00_00_00) // 最低2位(右)表示(0, 0)格子
 	for i, row := range mat {
 		for j, sgn := range row {
@@ -107,10 +146,10 @@ func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
 	mats[1] = ai.FlipLR(base) // 翻转
 
 	for _, mat := range mats {
-		m[t.Compress(mat).(int32)] = 0
+		m[t.Zip(mat).(int32)] = 0
 		for i := 0; i < 3; i++ {
 			mat, _ = ai.SpinSquare90(mat)
-			m[t.Compress(mat).(int32)] = 0
+			m[t.Zip(mat).(int32)] = 0
 		}
 	}
 

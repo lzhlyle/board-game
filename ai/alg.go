@@ -3,13 +3,13 @@ package ai
 import "board-game/core"
 
 type IAlg interface {
-	ICompress
+	IZip
 	ISimilar
-	ISelect
+	ICalculate
 }
 
-type ICompress interface {
-	Compress(mat [][]*core.PlaySignal) interface{}
+type IZip interface {
+	Zip(mat [][]*core.PlaySignal) interface{}
 }
 
 type ISimilar interface {
@@ -17,10 +17,10 @@ type ISimilar interface {
 }
 
 type NextRates struct {
-	nextZip interface{}
-	rates   [3]int // {win, draw, lose}
+	NextZip interface{}
+	Rates   [3]int // {win, draw, lose}
 }
 
-type ISelect interface {
-	Select(curr [][]*core.PlaySignal) (i, j int, err error)
+type ICalculate interface {
+	Calculate(curr [][]*core.PlaySignal) (i, j int, err error)
 }

@@ -76,14 +76,14 @@ func (p *Play) Play() {
 		log.Panicln(err)
 	}
 
-	p.moveIfAI(g)
+	p.beforeRound(g)
 
 	if err := g.MainLoop(); err != nil && err != gocui.ErrQuit {
 		log.Panicln(err)
 	}
 }
 
-func (p *Play) moveIfAI(g *gocui.Gui) {
+func (p *Play) beforeRound(g *gocui.Gui) {
 	if p.currPlayer.ai && p.hook != nil {
 		if fn := p.hook.AIMove(p.snapshot, p.move); fn != nil {
 			g.Update(fn)
@@ -150,7 +150,7 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 		p.currPlayer = p.players[(p.player2Idx[p.currPlayer]+1)%len(p.players)]
 	}
 
-	p.moveIfAI(g)
+	p.beforeRound(g)
 
 	return nil
 }
@@ -193,7 +193,7 @@ func (p *Play) restart(g *gocui.Gui, v *gocui.View) error {
 	_ = g.DeleteKeybinding("", gocui.KeyEnter, gocui.ModNone)
 	p.reset()
 
-	p.moveIfAI(g)
+	p.beforeRound(g)
 
 	return nil
 }

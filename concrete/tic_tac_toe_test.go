@@ -40,8 +40,8 @@ func TestTicTacToe_Compress(t1 *testing.T) {
 			t := &TicTacToe{
 				players: tt.fields.players,
 			}
-			if got := t.Compress(tt.args.mat); !reflect.DeepEqual(got, tt.want) {
-				t1.Errorf("Compress() = %v, want %v", got, tt.want)
+			if got := t.Zip(tt.args.mat); !reflect.DeepEqual(got, tt.want) {
+				t1.Errorf("Zip() = %v, want %v", got, tt.want)
 			}
 		})
 	}

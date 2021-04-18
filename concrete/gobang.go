@@ -27,14 +27,6 @@ func (g *Gobang) GameStart(lastStarter *core.Player, winner *core.Player, player
 	return players[0]
 }
 
-func (g *Gobang) Compress(mat [][]*core.PlaySignal) interface{} {
-	panic("implement me")
-}
-
-func (g *Gobang) GenSimilar(base [][]*core.PlaySignal) (interface{}, error) {
-	panic("implement me")
-}
-
 func (g *Gobang) Board() *core.Board {
 	return g.board
 }
