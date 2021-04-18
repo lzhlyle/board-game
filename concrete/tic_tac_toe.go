@@ -4,6 +4,7 @@ import (
 	"board-game/ai"
 	"board-game/core"
 	"github.com/jroimartin/gocui"
+	"math"
 	"math/rand"
 	"sort"
 	"time"
@@ -14,8 +15,8 @@ type TicTacToe struct {
 	players []*core.Player
 
 	// Alg
-	//curr2Ld map[int32]*ai.Similar
-	curr2NextRates map[int32][]ai.NextRates
+	// (preZip, nextRates)
+	zip2NextRates map[int32][]*ai.NextRates
 }
 
 func NewTicTacToe() *TicTacToe {
@@ -29,13 +30,91 @@ func NewTicTacToe() *TicTacToe {
 			core.NewAIPlayer("X"),
 			core.NewAIPlayer("O"),
 		},
+		zip2NextRates: make(map[int32][]*ai.NextRates),
 	}).buildChessRecord()
 }
 
 func (t *TicTacToe) buildChessRecord() *TicTacToe {
-	panic("implement me")
-	// doing @lzh build chess record
+	// later @lzh 可考虑多协程并发处理，注意将 zip2NextRates 改为支持并发的数据结构
+	t.dfs(core.NewEmptyMoveSnapshot(t.board.Width, t.board.Height), t.zip2NextRates)
+	return t
+}
 
+// dfs 递归搜索棋谱
+// 返回 aSnapShot 的胜率情况
+func (t *TicTacToe) dfs(aSnapshot *core.MoveSnapshot, zip2NextRates map[int32][]*ai.NextRates) *ai.NextRates {
+	aZip := t.Zip(aSnapshot.Board).(int32)
+
+	// terminator
+	if end, winner := t.GameEnd(aSnapshot); end {
+		zip2NextRates[aZip] = []*ai.NextRates{}
+		if winner == nil {
+			return ai.NewNextRates(aZip, [3]int{0, 100, 0})
+		}
+		return ai.NewNextRates(aZip, [3]int{100, 0, 0})
+	}
+
+	// look up possibles
+	b := t.NextPlayer(aSnapshot.Player)
+	bPossibles := make([][2]int, 0) // [2]int: {i, j}
+	for i, row := range aSnapshot.Board {
+		for j := 0; j < len(row); j++ {
+			if row[j] == nil {
+				bPossibles = append(bPossibles, [2]int{i, j})
+			}
+		}
+	}
+
+	allBNextRates := make([]*ai.NextRates, len(bPossibles))
+	// travel possibles
+	var aRates = [3]int{}
+	for i, pos := range bPossibles {
+		bSnapshot := core.GenSnapshot(aSnapshot.Step+1, pos[0], pos[1], b, aSnapshot)
+		bNextRates := t.dfs(bSnapshot, zip2NextRates)
+		allBNextRates[i] = bNextRates
+
+		// cross accumulate
+		// 零和游戏，交叉累计
+		bRates := bNextRates.Rates
+		aRates[0] += bRates[2]
+		aRates[1] += bRates[1]
+		aRates[2] += bRates[0]
+	}
+	// average
+	for i := 0; i < 3; i++ {
+		aRates[i] = aRates[i] / len(bPossibles)
+	}
+
+	t.sort(allBNextRates)
+	zip2NextRates[aZip] = allBNextRates
+	return ai.NewNextRates(aZip, aRates)
+}
+
+func (t *TicTacToe) sort(rates []*ai.NextRates) {
+	// 策略优先级排序
+	sort.Slice(rates, func(i, j int) bool {
+		// 能赢则赢
+		if rates[i].Rates[0] == 100 {
+			return true
+		}
+
+		// doing @lzh 考虑对方的下一步
+
+		// 若输率差在 20% 以内，则优先胜率更高的
+		if math.Abs(float64(rates[i].Rates[2])-float64(rates[i-1].Rates[2])) < 20 {
+			return rates[i].Rates[0] > rates[j].Rates[0]
+		}
+
+		// 优先输率更低的
+		return rates[i].Rates[2] < rates[j].Rates[2]
+	})
+}
+
+func (t *TicTacToe) NextPlayer(last *core.Player) *core.Player {
+	if last == t.players[0] {
+		return t.players[1]
+	}
+	return t.players[0]
 }
 
 type AIStrategy int
@@ -46,36 +125,41 @@ const (
 	AIStrategyLowestLose
 )
 
-func (t *TicTacToe) GameStart(lastStarter *core.Player, winner *core.Player, players []*core.Player, player2Idx map[*core.Player]int) *core.Player {
+func (t *TicTacToe) StartPlayer(lastStarter *core.Player, winner *core.Player, players []*core.Player) *core.Player {
+	return t.players[0]
+
 	if lastStarter == nil {
 		return players[0]
 	}
-
 	// 轮流开局
-	return players[(player2Idx[lastStarter]+1)%len(players)]
+	return t.NextPlayer(lastStarter)
 }
 
 func (t *TicTacToe) Calculate(curr [][]*core.PlaySignal) (i, j int, err error) {
-	// highest win strategy
 	currZip := t.Zip(curr).(int32)
-	//ldSimilar := t.curr2Ld[currZip]
-	//ldZip := ldSimilar.Zip.(int32)
-	rates := t.curr2NextRates[currZip]
-	// 策略优先级排序
-	sort.Slice(rates, func(i, j int) bool {
-		return rates[i].Rates[0] > rates[j].Rates[0]
-	})
-	// 选同结果的多种走法
-	nextZip := rates[0].NextZip.(int32) // 默认
-	for i := 1; i < len(rates); i++ {
-		if rates[i].Rates[0] != rates[i-1].Rates[0] {
-			nextZip = rates[rand.Intn(i)].NextZip.(int32)
+	rates := t.zip2NextRates[currZip]
+	if len(rates) < 1 {
+		return -1, -1, ai.ErrCannotMove
+	}
+
+	rate := rates[0]
+	nextZip := rate.NextZip.(int32) // 默认
+
+	// 相近结果的多种走法，增加趣味性
+	if rates[0].Rates[0] < 100 {
+		// 非必赢
+		for i := 1; i < len(rates); i++ {
+			// 输率在 10% 以内，则可任选
+			if math.Abs(float64(rates[i].Rates[2])-float64(rate.Rates[2])) < 10 {
+				nextZip = rates[rand.Intn(i)].NextZip.(int32)
+			}
 		}
 	}
+
 	// 确定差异
 	diff := currZip ^ nextZip
 	// 求差异的格子值
-	cell := 0
+	cell := -1
 	for diff > 0 { // 最多 9 次
 		diff >>= 2 // 2 = len(players)
 		cell++
@@ -137,38 +221,6 @@ func (t *TicTacToe) Zip(mat [][]*core.PlaySignal) interface{} {
 	return res
 }
 
-// GenSimilar
-// 旋转 90度，共 4 种
-// 左右翻转后，90度，共 4 种
-// 最多共 8 种，还需从中去重
-//func (t *TicTacToe) GenSimilar(base [][]*core.PlaySignal) ([]*ai.Similar, error) {
-//	m := make(map[int32]*ai.Similar, 8)   // 去重用
-//	mats := [2][][]*core.PlaySignal{base} // 翻转前后 2 种
-//
-//	mats[1] = ai.FlipLR(base) // 翻转
-//
-//	for flip, mat := range mats {
-//		zip := t.Zip(mat).(int32)
-//		m[zip] = ai.NewSimilar(zip, flip == 1, ai.Angle0)
-//		for i := 0; i < 3; i++ {
-//			mat, _ = ai.SpinSquare90(mat)
-//			iZip := t.Zip(mat).(int32)
-//			if _, ok := m[iZip]; !ok {
-//				m[iZip] = ai.NewSimilar(iZip, flip == 1, ai.Angle(i))
-//			}
-//		}
-//	}
-//
-//	res := make([]*ai.Similar, 0, len(m))
-//	for _, similar := range m {
-//		res = append(res, similar)
-//	}
-//	sort.Slice(res, func(i, j int) bool {
-//		return res[i].Zip.(int32) < res[j].Zip.(int32)
-//	})
-//	return res, nil
-//}
-
 func (t *TicTacToe) Board() *core.Board {
 	return t.board
 }
@@ -182,6 +234,10 @@ func (t *TicTacToe) RoundEnd(_ *core.MoveSnapshot) bool {
 }
 
 func (t *TicTacToe) GameEnd(snapshot *core.MoveSnapshot) (end bool, winner *core.Player) {
+	if snapshot.Player == nil {
+		return false, nil
+	}
+
 	validRow := func(mat [][]*core.PlaySignal, i int) bool {
 		for j := 0; j < 3; j++ {
 			if mat[i][j] != mat[i][0] {

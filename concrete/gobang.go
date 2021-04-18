@@ -23,7 +23,7 @@ func NewGobang() *Gobang {
 	}
 }
 
-func (g *Gobang) GameStart(lastStarter *core.Player, winner *core.Player, players []*core.Player, player2Idx map[*core.Player]int) *core.Player {
+func (g *Gobang) StartPlayer(lastStarter *core.Player, winner *core.Player, players []*core.Player) *core.Player {
 	return players[0]
 }
 
@@ -33,6 +33,13 @@ func (g *Gobang) Board() *core.Board {
 
 func (g *Gobang) Players() []*core.Player {
 	return g.players
+}
+
+func (g *Gobang) NextPlayer(last *core.Player) *core.Player {
+	if last == g.players[0] {
+		return g.players[1]
+	}
+	return g.players[0]
 }
 
 func (g *Gobang) RoundEnd(snapshot *core.MoveSnapshot) bool {

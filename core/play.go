@@ -18,23 +18,20 @@ type Play struct {
 	starter *Player
 	winner  *Player
 
-	rule       IGameRule
-	board      *Board
-	players    []*Player
-	player2Idx map[*Player]int
+	rule             IGameRule
+	board            *Board
+	playerCollection IPlayerCollection
+	players          []*Player
 
 	hook Hook
 }
 
 func NewPlay(bg BoardGame) *Play {
 	res := &Play{
-		rule:       bg,
-		board:      bg.Board(),
-		players:    bg.Players(),
-		player2Idx: make(map[*Player]int, len(bg.Players())),
-	}
-	for i, player := range res.players {
-		res.player2Idx[player] = i
+		rule:             bg,
+		board:            bg.Board(),
+		playerCollection: bg,
+		players:          bg.Players(),
 	}
 	if v, ok := bg.(Hook); ok {
 		res.hook = v
@@ -46,11 +43,11 @@ func (p *Play) reset() *Play {
 	p.step = 0
 	p.gameState = GameState_Ready
 
-	p.currPlayer = p.rule.GameStart(p.starter, p.winner, p.players, p.player2Idx)
+	p.currPlayer = p.playerCollection.StartPlayer(p.starter, p.winner, p.players)
 	p.starter = p.currPlayer
 	p.winner = nil
 
-	p.snapshot = NewMoveSnapshot(p.board.Width, p.board.Height)
+	p.snapshot = NewEmptyMoveSnapshot(p.board.Width, p.board.Height)
 	p.init = false
 	return p
 }
@@ -67,9 +64,6 @@ func (p *Play) Play() {
 	g.InputEsc = true
 
 	if err := g.SetKeybinding("", gocui.KeyCtrlC, gocui.ModNone, p.quit); err != nil {
-		log.Panicln(err)
-	}
-	if err := g.SetKeybinding("", gocui.KeyCtrlR, gocui.ModNone, p.restart); err != nil {
 		log.Panicln(err)
 	}
 	if err := g.SetKeybinding("", gocui.MouseLeft, gocui.ModNone, p.move); err != nil {
@@ -135,7 +129,7 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 	_, _ = fmt.Fprintf(v, painting.locStrFmt, signal)
 
 	i, j := NameToCell(v.Name())
-	p.snapshot = NewGameSnapshot(p.step, i, j, p.currPlayer, p.snapshot)
+	p.snapshot = GenSnapshot(p.step, i, j, p.currPlayer, p.snapshot)
 
 	g.Update(func(g *gocui.Gui) error {
 		end, winner := p.rule.GameEnd(p.snapshot)
@@ -147,7 +141,7 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 
 	p.step++
 	if p.rule.RoundEnd(p.snapshot) {
-		p.currPlayer = p.players[(p.player2Idx[p.currPlayer]+1)%len(p.players)]
+		p.currPlayer = p.playerCollection.NextPlayer(p.currPlayer)
 	}
 
 	p.beforeRound(g)

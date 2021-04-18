@@ -14,10 +14,11 @@ type IBoard interface {
 
 type IPlayerCollection interface {
 	Players() []*Player
+	StartPlayer(lastStarter *Player, winner *Player, players []*Player) *Player
+	NextPlayer(last *Player) *Player
 }
 
 type IGameRule interface {
-	GameStart(lastStarter *Player, winner *Player, players []*Player, player2Idx map[*Player]int) *Player
 	RoundEnd(snapshot *MoveSnapshot) bool
 	GameEnd(snapshot *MoveSnapshot) (end bool, winner *Player)
 }

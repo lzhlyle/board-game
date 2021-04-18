@@ -8,7 +8,7 @@ type MoveSnapshot struct {
 	Pre, Next *MoveSnapshot   // 上一步、下一步
 }
 
-func NewMoveSnapshot(width, height int) *MoveSnapshot {
+func NewEmptyMoveSnapshot(width, height int) *MoveSnapshot {
 	board := make([][]*PlaySignal, height)
 	for i := range board {
 		board[i] = make([]*PlaySignal, width)
@@ -16,7 +16,7 @@ func NewMoveSnapshot(width, height int) *MoveSnapshot {
 	return &MoveSnapshot{Step: 0, Board: board}
 }
 
-func NewGameSnapshot(step, i, j int, player *Player, pre *MoveSnapshot) *MoveSnapshot {
+func GenSnapshot(step, i, j int, player *Player, pre *MoveSnapshot) *MoveSnapshot {
 	curr := &MoveSnapshot{
 		Step:   step,
 		I:      i,
