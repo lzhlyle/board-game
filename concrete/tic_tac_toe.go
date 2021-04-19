@@ -85,21 +85,55 @@ func (t *TicTacToe) dfs(aSnapshot *core.MoveSnapshot, zip2NextRates map[int32][]
 		aRates[i] = aRates[i] / len(bPossibles)
 	}
 
-	t.sort(allBNextRates)
-	zip2NextRates[aZip] = allBNextRates
+	zip2NextRates[aZip] = t.sort(t.filter(allBNextRates))
 	return ai.NewNextRates(aZip, aRates)
 }
 
-func (t *TicTacToe) sort(rates []*ai.NextRates) {
+func (t *TicTacToe) filter(rates []*ai.NextRates) []*ai.NextRates {
+	// 能赢则赢
+	res := make([]*ai.NextRates, 0, len(rates))
+	for _, rate := range rates {
+		if rate.Rates[0] == 100 {
+			// 多几种选择，而非直接返回
+			res = append(res, rate)
+		}
+	}
+	if len(res) > 0 {
+		return res
+	}
+
+	// 对方再下一步不会赢，则才可走
+	for _, rate := range rates {
+		nextWillWin := false
+		for _, next := range t.zip2NextRates[rate.NextZip.(int32)] {
+			if next.Rates[0] == 100 {
+				nextWillWin = true
+				break
+			}
+		}
+		if !nextWillWin {
+			res = append(res, rate)
+		}
+	}
+	if len(res) == 0 {
+		// 必输，放弃治疗
+		return rates
+	}
+
+	return res
+}
+
+func (t *TicTacToe) sort(rates []*ai.NextRates) []*ai.NextRates {
+	if len(rates) == 0 {
+		return rates
+	}
+
+	if rates[0].Rates[0] == 100 {
+		return rates // 能赢，无需排序
+	}
+
 	// 策略优先级排序
 	sort.Slice(rates, func(i, j int) bool {
-		// 能赢则赢
-		if rates[i].Rates[0] == 100 {
-			return true
-		}
-
-		// doing @lzh 考虑对方的下一步
-
 		// 若输率差在 20% 以内，则优先胜率更高的
 		if math.Abs(float64(rates[i].Rates[2])-float64(rates[i-1].Rates[2])) < 20 {
 			return rates[i].Rates[0] > rates[j].Rates[0]
@@ -108,6 +142,7 @@ func (t *TicTacToe) sort(rates []*ai.NextRates) {
 		// 优先输率更低的
 		return rates[i].Rates[2] < rates[j].Rates[2]
 	})
+	return rates
 }
 
 func (t *TicTacToe) NextPlayer(last *core.Player) *core.Player {
@@ -138,8 +173,21 @@ func (t *TicTacToe) StartPlayer(lastStarter *core.Player, winner *core.Player, p
 func (t *TicTacToe) Calculate(curr [][]*core.PlaySignal) (i, j int, err error) {
 	currZip := t.Zip(curr).(int32)
 	rates := t.zip2NextRates[currZip]
-	if len(rates) < 1 {
-		return -1, -1, ai.ErrCannotMove
+	if len(rates) == 0 {
+		// random strategy
+		optionals := make([][2]int, 0)
+		for i := range curr {
+			for j := range curr[i] {
+				if curr[i][j] == nil {
+					optionals = append(optionals, [2]int{i, j})
+				}
+			}
+		}
+		if len(optionals) == 0 {
+			return -1, -1, ai.ErrCannotMove
+		}
+		res := optionals[rand.Intn(len(optionals))]
+		return res[0], res[1], nil
 	}
 
 	rate := rates[0]
@@ -166,21 +214,6 @@ func (t *TicTacToe) Calculate(curr [][]*core.PlaySignal) (i, j int, err error) {
 	}
 	// 确定格子的点位
 	return cell / 3, cell % 3, nil
-
-	// random strategy
-	//optionals := make([][2]int, 0)
-	//for i := range curr {
-	//	for j := range curr[i] {
-	//		if curr[i][j] == nil {
-	//			optionals = append(optionals, [2]int{i, j})
-	//		}
-	//	}
-	//}
-	//if len(optionals) == 0 {
-	//	return -1, -1, ai.ErrCannotMove
-	//}
-	//res := optionals[rand.Intn(len(optionals))]
-	//return res[0], res[1], nil
 }
 
 func (t *TicTacToe) AIMove(snapshot *core.MoveSnapshot, moveFn core.MoveFn) core.UpdateFn {
