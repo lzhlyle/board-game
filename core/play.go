@@ -43,7 +43,8 @@ func (p *Play) reset() *Play {
 	p.step = 0
 	p.gameState = GameState_Ready
 
-	p.currPlayer = p.playerCollection.StartPlayer(p.starter, p.winner, p.players)
+	p.players = p.playerCollection.StartPlayerSequence(p.starter, p.winner, p.players)
+	p.currPlayer = p.players[0]
 	p.starter = p.currPlayer
 	p.winner = nil
 

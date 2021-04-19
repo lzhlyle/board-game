@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	game := concrete.NewTicTacToe()
+	game := concrete.NewGobang()
 	core.NewPlay(game).Play()
 }

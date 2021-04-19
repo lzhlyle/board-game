@@ -23,8 +23,8 @@ func NewGobang() *Gobang {
 	}
 }
 
-func (g *Gobang) StartPlayer(lastStarter *core.Player, winner *core.Player, players []*core.Player) *core.Player {
-	return players[0]
+func (g *Gobang) StartPlayerSequence(lastStarter *core.Player, winner *core.Player, players []*core.Player) []*core.Player {
+	return players
 }
 
 func (g *Gobang) Board() *core.Board {

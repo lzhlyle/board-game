@@ -27,7 +27,7 @@ func NewTicTacToe() *TicTacToe {
 			MoveLocStyle: core.MoveLocStyle_InCell,
 		},
 		players: []*core.Player{
-			core.NewAIPlayer("X"),
+			core.NewPlayer("X"),
 			core.NewAIPlayer("O"),
 		},
 		zip2NextRates: make(map[int32][]*ai.NextRates),
@@ -160,34 +160,20 @@ const (
 	AIStrategyLowestLose
 )
 
-func (t *TicTacToe) StartPlayer(lastStarter *core.Player, winner *core.Player, players []*core.Player) *core.Player {
-	return t.players[0]
-
+func (t *TicTacToe) StartPlayerSequence(lastStarter *core.Player, winner *core.Player, players []*core.Player) []*core.Player {
 	if lastStarter == nil {
-		return players[0]
+		return players
 	}
 	// 轮流开局
-	return t.NextPlayer(lastStarter)
+	players[0], players[1] = players[1], players[0]
+	return players
 }
 
 func (t *TicTacToe) Calculate(curr [][]*core.PlaySignal) (i, j int, err error) {
 	currZip := t.Zip(curr).(int32)
 	rates := t.zip2NextRates[currZip]
 	if len(rates) == 0 {
-		// random strategy
-		optionals := make([][2]int, 0)
-		for i := range curr {
-			for j := range curr[i] {
-				if curr[i][j] == nil {
-					optionals = append(optionals, [2]int{i, j})
-				}
-			}
-		}
-		if len(optionals) == 0 {
-			return -1, -1, ai.ErrCannotMove
-		}
-		res := optionals[rand.Intn(len(optionals))]
-		return res[0], res[1], nil
+		return -1, -1, ai.ErrCannotMove
 	}
 
 	rate := rates[0]
@@ -214,6 +200,21 @@ func (t *TicTacToe) Calculate(curr [][]*core.PlaySignal) (i, j int, err error) {
 	}
 	// 确定格子的点位
 	return cell / 3, cell % 3, nil
+
+	//// random strategy
+	//optionals := make([][2]int, 0)
+	//for i := range curr {
+	//	for j := range curr[i] {
+	//		if curr[i][j] == nil {
+	//			optionals = append(optionals, [2]int{i, j})
+	//		}
+	//	}
+	//}
+	//if len(optionals) == 0 {
+	//	return -1, -1, ai.ErrCannotMove
+	//}
+	//res := optionals[rand.Intn(len(optionals))]
+	//return res[0], res[1], nil
 }
 
 func (t *TicTacToe) AIMove(snapshot *core.MoveSnapshot, moveFn core.MoveFn) core.UpdateFn {

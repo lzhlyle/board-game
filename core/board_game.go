@@ -14,7 +14,7 @@ type IBoard interface {
 
 type IPlayerCollection interface {
 	Players() []*Player
-	StartPlayer(lastStarter *Player, winner *Player, players []*Player) *Player
+	StartPlayerSequence(lastStarter *Player, winner *Player, players []*Player) []*Player
 	NextPlayer(last *Player) *Player
 }
 
