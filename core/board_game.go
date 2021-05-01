@@ -8,21 +8,25 @@ type BoardGame interface {
 	IGameRule
 }
 
+// IBoard 棋盘
 type IBoard interface {
 	Board() *Board
 }
 
+// IPlayerCollection 玩家集
 type IPlayerCollection interface {
 	Players() []*Player
 	StartPlayerSequence(lastStarter *Player, winner *Player, players []*Player) []*Player
 	NextPlayer(last *Player) *Player
 }
 
+// IGameRule 游戏规则
 type IGameRule interface {
 	RoundEnd(snapshot *MoveSnapshot) bool
 	GameEnd(snapshot *MoveSnapshot) (end bool, winner *Player)
 }
 
+// Hook 钩子
 type Hook interface {
 	AIMove(snapshot *MoveSnapshot, moveFn MoveFn) UpdateFn
 }
