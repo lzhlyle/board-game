@@ -3,7 +3,7 @@ package core
 // Player 单个玩家
 type Player struct {
 	Signal *PlaySignal
-	ai     bool
+	AI     bool
 	state  PlayState
 }
 
@@ -12,7 +12,7 @@ func NewPlayer(tag string) *Player {
 		Signal: &PlaySignal{
 			Tag: tag,
 		},
-		ai:    false,
+		AI:    false,
 		state: PlayState_Ready,
 	}
 }
@@ -22,7 +22,7 @@ func NewAIPlayer(tag string) *Player {
 		Signal: &PlaySignal{
 			Tag: tag,
 		},
-		ai:    true,
+		AI:    true,
 		state: PlayState_Ready,
 	}
 }

@@ -16,13 +16,21 @@ type TicTacToeAI struct {
 	*TicTacToe
 	// (preZip, nextRates)
 	zip2NextRates map[int32][]*ai.NextRates
+	allAI         bool
 }
 
 func NewTicTacToeAI() *TicTacToeAI {
-	return (&TicTacToeAI{
+	res := (&TicTacToeAI{
 		TicTacToe:     NewTicTacToe(),
 		zip2NextRates: make(map[int32][]*ai.NextRates),
 	}).buildChessRecord()
+
+	res.allAI = true
+	for _, p := range res.players {
+		res.allAI = res.allAI && p.AI
+	}
+
+	return res
 }
 
 type AIStrategy int
@@ -46,7 +54,11 @@ func (t *TicTacToeAI) AIMove(snapshot *core.MoveSnapshot, moveFn core.MoveFn) co
 		if err != nil {
 			return err
 		}
-		time.Sleep(100 * time.Millisecond)
+
+		if !t.allAI {
+			time.Sleep(100 * time.Millisecond)
+		}
+
 		return moveFn(g, v)
 	}
 }

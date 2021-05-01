@@ -22,6 +22,7 @@ type Play struct {
 	board            *Board
 	playerCollection IPlayerCollection
 	players          []*Player
+	allAI            bool
 
 	hook Hook
 }
@@ -33,9 +34,16 @@ func NewPlay(bg BoardGame) *Play {
 		playerCollection: bg,
 		players:          bg.Players(),
 	}
+
+	res.allAI = true
+	for _, p := range res.players {
+		res.allAI = res.allAI && p.AI
+	}
+
 	if v, ok := bg.(Hook); ok {
 		res.hook = v
 	}
+
 	return res.reset()
 }
 
@@ -79,7 +87,7 @@ func (p *Play) Play() {
 }
 
 func (p *Play) beforeRound(g *gocui.Gui) {
-	if p.currPlayer.ai && p.hook != nil {
+	if p.currPlayer.AI && p.hook != nil {
 		if fn := p.hook.AIMove(p.snapshot, p.move); fn != nil {
 			g.Update(fn)
 		}
@@ -153,7 +161,9 @@ func (p *Play) move(g *gocui.Gui, v *gocui.View) error {
 func (p *Play) win(g *gocui.Gui, winner *Player) error {
 	p.winner = winner
 	p.gameState = GameState_End
-	time.Sleep(500 * time.Millisecond)
+	if !p.allAI {
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	x0, y0, x1, y1, err := calcWinViewLocation(p.board.Width, p.board.Height, g)
 	if err != nil {
@@ -164,10 +174,18 @@ func (p *Play) win(g *gocui.Gui, winner *Player) error {
 		return err
 	}
 
+	if len(v.Buffer()) > 0 {
+		return nil
+	}
 	if winner != nil {
 		_, _ = fmt.Fprintf(v, "%s win!", winner.Signal.Tag)
 	} else {
 		_, _ = fmt.Fprint(v, "draw!")
+
+	}
+
+	if p.allAI {
+		return p.restart(g, v)
 	}
 
 	_ = g.SetKeybinding("", gocui.KeyEnter, gocui.ModNone, p.restart)
@@ -180,7 +198,8 @@ func (p *Play) win(g *gocui.Gui, winner *Player) error {
 	return nil
 }
 
-func (p *Play) restart(g *gocui.Gui, v *gocui.View) error {
+func (p *Play) restart(g *gocui.Gui,
+	v *gocui.View) error {
 	_ = g.DeleteView(v.Name())
 	for _, v := range g.Views() {
 		v.Clear()
@@ -193,6 +212,7 @@ func (p *Play) restart(g *gocui.Gui, v *gocui.View) error {
 	return nil
 }
 
-func (p *Play) quit(_ *gocui.Gui, _ *gocui.View) error {
+func (p *Play) quit(_ *gocui.Gui,
+	_ *gocui.View) error {
 	return gocui.ErrQuit
 }

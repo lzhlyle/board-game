@@ -7,7 +7,7 @@ import (
 
 func main() {
 	//game := concrete.NewGobang()
-	game := concrete.NewTicTacToe()
-	//game := concrete.NewTicTacToeAI()
+	//game := concrete.NewTicTacToe()
+	game := concrete.NewTicTacToeAI()
 	core.NewPlay(game).Play()
 }
