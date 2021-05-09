@@ -12,9 +12,15 @@ type ICalculate interface {
 	Calculate(curr [][]*core.PlaySignal) (i, j int, err error)
 }
 
+type CalcFunc func(curr [][]*core.PlaySignal) (i, j int, err error)
+
 // IZip 棋盘压缩
 type IZip interface {
 	Zip(mat [][]*core.PlaySignal) interface{}
+}
+
+type IChessRecord interface {
+	SortRecords(records []*NextRates)
 }
 
 // NextRates 下一步胜率集
@@ -26,3 +32,5 @@ type NextRates struct {
 func NewNextRates(nextZip interface{}, rates [3]int) *NextRates {
 	return &NextRates{NextZip: nextZip, Rates: rates}
 }
+
+type AIStrategy int

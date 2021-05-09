@@ -198,8 +198,7 @@ func (p *Play) win(g *gocui.Gui, winner *Player) error {
 	return nil
 }
 
-func (p *Play) restart(g *gocui.Gui,
-	v *gocui.View) error {
+func (p *Play) restart(g *gocui.Gui, v *gocui.View) error {
 	_ = g.DeleteView(v.Name())
 	for _, v := range g.Views() {
 		v.Clear()
@@ -212,7 +211,6 @@ func (p *Play) restart(g *gocui.Gui,
 	return nil
 }
 
-func (p *Play) quit(_ *gocui.Gui,
-	_ *gocui.View) error {
+func (p *Play) quit(_ *gocui.Gui, _ *gocui.View) error {
 	return gocui.ErrQuit
 }

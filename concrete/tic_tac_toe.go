@@ -17,7 +17,7 @@ func NewTicTacToe() *TicTacToe {
 			MoveLocStyle: core.MoveLocStyle_InCell,
 		},
 		players: []*core.Player{
-			core.NewAIPlayer("X"),
+			core.NewPlayer("X"),
 			core.NewAIPlayer("O"),
 		},
 	}
