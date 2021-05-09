@@ -1,12 +1,12 @@
 package concrete
 
 import (
-	"board-game/ai/ai_impl"
+	ai_impl2 "board-game/ai_impl"
 )
 
 type GobangAI struct {
 	*Gobang
-	*ai_impl.DefaultAIImpl
+	*ai_impl2.DefaultAIImpl
 }
 
 func NewGobangAI() *GobangAI {
@@ -14,7 +14,7 @@ func NewGobangAI() *GobangAI {
 		Gobang: NewGobang(),
 	}
 
-	res.DefaultAIImpl = ai_impl.NewDefaultAIImpl(res.Gobang.players)
+	res.DefaultAIImpl = ai_impl2.NewDefaultAIImpl(res.Gobang.players)
 
 	return res
 }

@@ -2,7 +2,7 @@ package concrete
 
 import (
 	"board-game/ai"
-	"board-game/ai/ai_impl"
+	ai_impl2 "board-game/ai_impl"
 	"board-game/core"
 	"math"
 	"math/rand"
@@ -11,8 +11,8 @@ import (
 
 type TicTacToeAI struct {
 	*TicTacToe
-	*ai_impl.BuildChessRecord
-	*ai_impl.DefaultAIImpl
+	*ai_impl2.ChessRecordGenerator
+	*ai_impl2.DefaultAIImpl
 }
 
 const AIStrategySmart ai.Strategy = 100 + iota
@@ -22,9 +22,9 @@ func NewTicTacToeAI() *TicTacToeAI {
 		TicTacToe: NewTicTacToe(),
 	}
 
-	res.BuildChessRecord = ai_impl.NewBuildChessRecord(res, res, res)
+	res.ChessRecordGenerator = ai_impl2.NewChessRecordGenerator(res, res, res)
 
-	res.DefaultAIImpl = ai_impl.NewDefaultAIImpl(res.TicTacToe.players)
+	res.DefaultAIImpl = ai_impl2.NewDefaultAIImpl(res.TicTacToe.players)
 	res.DefaultAIImpl.RegisterStrategy(AIStrategySmart, res.smartStrategy)
 	res.DefaultAIImpl.SetCurrentStrategy(AIStrategySmart)
 
@@ -33,7 +33,7 @@ func NewTicTacToeAI() *TicTacToeAI {
 
 func (t *TicTacToeAI) smartStrategy(curr [][]*core.PlaySignal) (i, j int, err error) {
 	currZip := t.Zip(curr).(int32)
-	rates := t.BuildChessRecord.Zip2NextRates[currZip]
+	rates := t.ChessRecordGenerator.Zip2NextRates[currZip]
 	if len(rates) == 0 {
 		return -1, -1, ai.ErrCannotMove
 	}

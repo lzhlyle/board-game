@@ -16,6 +16,6 @@ const (
 
 type MoveLocStylePainting struct {
 	defStr, locStrFmt string
-	side          int
+	side              int
 	frame             bool
 }
