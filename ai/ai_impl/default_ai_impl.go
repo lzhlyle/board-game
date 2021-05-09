@@ -12,11 +12,11 @@ type DefaultAIImpl struct {
 	players []*core.Player
 
 	allAI        bool
-	strategies   map[ai.AIStrategy]ai.CalcFunc
-	currStrategy ai.AIStrategy
+	strategies   map[ai.Strategy]ai.CalcFunc
+	currStrategy ai.Strategy
 }
 
-const AIStrategyRandom ai.AIStrategy = 1 + iota
+const AIStrategyRandom ai.Strategy = 1 + iota
 
 func NewDefaultAIImpl(players []*core.Player) *DefaultAIImpl {
 	res := &DefaultAIImpl{
@@ -29,14 +29,14 @@ func NewDefaultAIImpl(players []*core.Player) *DefaultAIImpl {
 		res.allAI = res.allAI && p.AI
 	}
 
-	res.strategies = map[ai.AIStrategy]ai.CalcFunc{
+	res.strategies = map[ai.Strategy]ai.CalcFunc{
 		AIStrategyRandom: res.randomStrategy,
 	}
 
 	return res
 }
 
-func (t *DefaultAIImpl) RegisterStrategy(key ai.AIStrategy, strategy ai.CalcFunc) bool {
+func (t *DefaultAIImpl) RegisterStrategy(key ai.Strategy, strategy ai.CalcFunc) bool {
 	if _, ok := t.strategies[key]; ok {
 		return false
 	}
@@ -44,7 +44,7 @@ func (t *DefaultAIImpl) RegisterStrategy(key ai.AIStrategy, strategy ai.CalcFunc
 	return true
 }
 
-func (t *DefaultAIImpl) SetCurrentStrategy(key ai.AIStrategy) bool {
+func (t *DefaultAIImpl) SetCurrentStrategy(key ai.Strategy) bool {
 	if _, ok := t.strategies[key]; !ok {
 		return false
 	}

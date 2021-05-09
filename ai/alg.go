@@ -4,7 +4,6 @@ import "board-game/core"
 
 type IAlg interface {
 	ICalculate
-	IZip
 }
 
 // ICalculate 走棋计算
@@ -19,6 +18,7 @@ type IZip interface {
 	Zip(mat [][]*core.PlaySignal) interface{}
 }
 
+// IChessRecord 棋谱
 type IChessRecord interface {
 	SortRecords(records []*NextRates)
 }
@@ -33,4 +33,4 @@ func NewNextRates(nextZip interface{}, rates [3]int) *NextRates {
 	return &NextRates{NextZip: nextZip, Rates: rates}
 }
 
-type AIStrategy int
+type Strategy int

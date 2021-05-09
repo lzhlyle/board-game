@@ -18,7 +18,7 @@ func NewGobang() *Gobang {
 		},
 		players: []*core.Player{
 			core.NewPlayer("X"),
-			core.NewPlayer("O"),
+			core.NewAIPlayer("O"),
 		},
 	}
 }

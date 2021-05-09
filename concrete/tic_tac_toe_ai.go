@@ -15,7 +15,7 @@ type TicTacToeAI struct {
 	*ai_impl.DefaultAIImpl
 }
 
-const AIStrategySmart ai.AIStrategy = 100 + iota
+const AIStrategySmart ai.Strategy = 100 + iota
 
 func NewTicTacToeAI() *TicTacToeAI {
 	res := &TicTacToeAI{
