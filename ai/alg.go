@@ -16,6 +16,7 @@ type CalcFunc func(curr [][]*core.PlaySignal) (i, j int, err error)
 // IZip 棋盘压缩
 type IZip interface {
 	Zip(mat [][]*core.PlaySignal) interface{}
+	Diff4Cell(curr, next interface{}) (i, j int)
 }
 
 // IChessRecord 棋谱

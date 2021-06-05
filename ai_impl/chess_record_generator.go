@@ -21,7 +21,6 @@ func NewChessRecordGenerator(chessRecord ai.IChessRecord, zip ai.IZip, boardGame
 }
 
 func (gen *ChessRecordGenerator) generate() {
-	// later @lzh 可考虑多协程并发处理，注意将 Zip2NextRates 改为支持并发的数据结构
 	gen.dfs(core.NewEmptyMoveSnapshot(gen.boardGame.Board().Width, gen.boardGame.Board().Height), gen.Zip2NextRates)
 }
 

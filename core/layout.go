@@ -2,9 +2,10 @@ package core
 
 import (
 	"fmt"
-	"github.com/jroimartin/gocui"
 	"strconv"
 	"strings"
+
+	"github.com/jroimartin/gocui"
 )
 
 var (
@@ -33,6 +34,11 @@ func NameToCell(name string) (i, j int) {
 	i, _ = strconv.Atoi(arr[1])
 	j, _ = strconv.Atoi(arr[2])
 	return
+}
+
+func IsCell(name string) bool {
+	arr := strings.Split(name, "-")
+	return len(arr) == 3
 }
 
 func calcWinViewLocation(w, h int, g *gocui.Gui) (wx0, wy0, wx1, wy1 int, err error) {

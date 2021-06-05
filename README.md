@@ -2,6 +2,10 @@
 
 a board game & ai framework
 
+## 框架博客
+
+- [blog.lzh.today/board-game-framework](http://blog.lzh.today/board-game-framework/)
+
 ## 目录 & 文件
 
 - `core/` 游戏基建类，游戏框架（无关 AI）

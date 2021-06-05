@@ -9,6 +9,7 @@ import (
 )
 
 type DefaultAIImpl struct {
+	core.EmptyHook
 	players []*core.Player
 
 	allAI        bool

@@ -29,6 +29,8 @@ type IGameRule interface {
 // Hook 钩子
 type Hook interface {
 	AIMove(snapshot *MoveSnapshot, moveFn MoveFn) UpdateFn
+	BeforeRound(g *gocui.Gui)
+	AfterRound(g *gocui.Gui, snapshot *MoveSnapshot)
 }
 
 type (

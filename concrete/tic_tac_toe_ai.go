@@ -4,6 +4,7 @@ import (
 	"board-game/ai"
 	ai_impl2 "board-game/ai_impl"
 	"board-game/core"
+	"github.com/jroimartin/gocui"
 	"math"
 	"math/rand"
 	"sort"
@@ -13,6 +14,7 @@ type TicTacToeAI struct {
 	*TicTacToe
 	*ai_impl2.ChessRecordGenerator
 	*ai_impl2.DefaultAIImpl
+	core.Dashboard
 }
 
 const AIStrategySmart ai.Strategy = 100 + iota
@@ -20,6 +22,7 @@ const AIStrategySmart ai.Strategy = 100 + iota
 func NewTicTacToeAI() *TicTacToeAI {
 	res := &TicTacToeAI{
 		TicTacToe: NewTicTacToe(),
+		Dashboard: core.NewDefaultDashboard("..Before AI Move.."),
 	}
 
 	res.ChessRecordGenerator = ai_impl2.NewChessRecordGenerator(res, res, res)
@@ -52,16 +55,8 @@ func (t *TicTacToeAI) smartStrategy(curr [][]*core.PlaySignal) (i, j int, err er
 		}
 	}
 
-	// 确定差异
-	diff := currZip ^ nextZip
-	// 求差异的格子值
-	cell := -1
-	for diff > 0 { // 最多 9 次
-		diff >>= 2 // 2 = len(players)
-		cell++
-	}
-	// 确定格子的点位
-	return cell / 3, cell % 3, nil
+	i, j = t.Diff4Cell(currZip, nextZip)
+	return
 }
 
 func (t *TicTacToeAI) Zip(mat [][]*core.PlaySignal) interface{} {
@@ -83,6 +78,18 @@ func (t *TicTacToeAI) Zip(mat [][]*core.PlaySignal) interface{} {
 	return res
 }
 
+func (t *TicTacToeAI) Diff4Cell(curr, next interface{}) (i, j int) {
+	diff := curr.(int32) ^ next.(int32)
+	// 求差异的格子值
+	cell := -1
+	for diff > 0 { // 最多 9 次
+		diff >>= 2 // 2 = len(players)
+		cell++
+	}
+	// 确定格子的点位
+	return cell / 3, cell % 3
+}
+
 func (t *TicTacToeAI) SortRecords(rates []*ai.NextRates) {
 	sort.Slice(rates, func(i, j int) bool {
 		// 若输率差在 20% 以内，则优先胜率更高的
@@ -93,4 +100,27 @@ func (t *TicTacToeAI) SortRecords(rates []*ai.NextRates) {
 		// 优先输率更低的
 		return rates[i].Rates[2] < rates[j].Rates[2]
 	})
+}
+
+func (t *TicTacToeAI) AfterRound(g *gocui.Gui, snapshot *core.MoveSnapshot) {
+	currZip := t.Zip(snapshot.Board).(int32)
+	rates := t.ChessRecordGenerator.Zip2NextRates[currZip]
+	if dashboard, ok := t.Dashboard.(*core.DefaultDashboard); ok {
+		dashboard.Clear()
+		mat := [3][3]interface{}{}
+		for _, rate := range rates {
+			ri, rj := t.Diff4Cell(currZip, rate.NextZip)
+			mat[ri][rj] = rate.Rates
+		}
+		for _, row := range mat {
+			for _, rate := range row {
+				if rate != nil {
+					dashboard.Appendf("%v ", rate)
+				} else {
+					dashboard.Appendf("[-- -- --]\t")
+				}
+			}
+			dashboard.LineEnd()
+		}
+	}
 }
