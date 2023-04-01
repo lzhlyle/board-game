@@ -101,3 +101,56 @@ func (g *Gobang) GameEnd(snapshot *core.MoveSnapshot) (end bool, winner *core.Pl
 	// 平局
 	return true, nil
 }
+
+func (g *Gobang) IsGameOver(curr [][]*core.PlaySignal) bool {
+	// 检查棋盘是否填满
+	isFull := true
+	for i := 0; i < len(curr); i++ {
+		for j := 0; j < len(curr[i]); j++ {
+			if curr[i][j] == nil {
+				isFull = false
+				break
+			}
+		}
+		if !isFull {
+			break
+		}
+	}
+	if isFull {
+		return true
+	}
+
+	// 检查是否有一方连成了五子
+	for i := 0; i < len(curr); i++ {
+		for j := 0; j < len(curr[i]); j++ {
+			if curr[i][j] != nil {
+				if g.checkWin(curr, i, j) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
+// 辅助函数，用于检查某个位置是否有五子连线
+func (g *Gobang) checkWin(curr [][]*core.PlaySignal, x, y int) bool {
+	tag := curr[x][y].Tag
+	dirs := [][2]int{{1, 0}, {0, 1}, {1, 1}, {1, -1}}
+	for _, dir := range dirs {
+		count := 1
+		for i := 1; i < 5; i++ {
+			x1 := x + i*dir[0]
+			y1 := y + i*dir[1]
+			if x1 < 0 || x1 >= len(curr) || y1 < 0 || y1 >= len(curr[x1]) || curr[x1][y1] == nil || curr[x1][y1].Tag != tag {
+				break
+			}
+			count++
+		}
+		if count >= 5 {
+			return true
+		}
+	}
+	return false
+}

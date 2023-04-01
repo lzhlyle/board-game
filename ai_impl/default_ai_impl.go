@@ -1,11 +1,13 @@
 package ai_impl
 
 import (
-	"board-game/ai"
-	"board-game/core"
-	"github.com/jroimartin/gocui"
 	"math/rand"
 	"time"
+
+	"board-game/ai"
+	"board-game/core"
+
+	"github.com/jroimartin/gocui"
 )
 
 type DefaultAIImpl struct {

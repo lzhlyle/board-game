@@ -1,13 +1,15 @@
 package concrete
 
 import (
-	"board-game/ai"
-	ai_impl2 "board-game/ai_impl"
-	"board-game/core"
-	"github.com/jroimartin/gocui"
 	"math"
 	"math/rand"
 	"sort"
+
+	"board-game/ai"
+	ai_impl2 "board-game/ai_impl"
+	"board-game/core"
+
+	"github.com/jroimartin/gocui"
 )
 
 type TicTacToeAI struct {
@@ -16,8 +18,6 @@ type TicTacToeAI struct {
 	*ai_impl2.DefaultAIImpl
 	core.Dashboard
 }
-
-const AIStrategySmart ai.Strategy = 100 + iota
 
 func NewTicTacToeAI() *TicTacToeAI {
 	res := &TicTacToeAI{
@@ -28,6 +28,8 @@ func NewTicTacToeAI() *TicTacToeAI {
 	res.ChessRecordGenerator = ai_impl2.NewChessRecordGenerator(res, res, res)
 
 	res.DefaultAIImpl = ai_impl2.NewDefaultAIImpl(res.TicTacToe.players)
+
+	const AIStrategySmart ai.Strategy = 100 + iota
 	res.DefaultAIImpl.RegisterStrategy(AIStrategySmart, res.smartStrategy)
 	res.DefaultAIImpl.SetCurrentStrategy(AIStrategySmart)
 
