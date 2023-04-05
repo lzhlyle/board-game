@@ -119,41 +119,62 @@ func (g *GobangAI) minValue(curr [][]*core.PlaySignal, alpha, beta float64, tag 
 	return val
 }
 
-// 这特么算数量有什么用？！围棋也不是这么算的好吧
 func (g *GobangAI) evaluate(curr [][]*core.PlaySignal, tag string) float64 {
-	// 计算当前局面中 X 和 O 的棋子数量
-	xCount, oCount := 0, 0
-	for i := 0; i < len(curr); i++ {
-		for j := 0; j < len(curr[i]); j++ {
-			if curr[i][j] != nil {
-				if curr[i][j].Tag == "X" {
-					xCount++
-				} else if curr[i][j].Tag == "O" {
-					oCount++
+	var score float64
+	var opponentTag string
+	if tag == "X" {
+		opponentTag = "O"
+	} else {
+		opponentTag = "X"
+	}
+	// 计算当前执子方的得分
+	score += evaluateDirection(curr, tag, 0, 1)  // 水平方向
+	score += evaluateDirection(curr, tag, 1, 0)  // 垂直方向
+	score += evaluateDirection(curr, tag, 1, 1)  // 正斜方向
+	score += evaluateDirection(curr, tag, -1, 1) // 反斜方向
+
+	// 计算对手的得分
+	score -= evaluateDirection(curr, opponentTag, 0, 1)  // 水平方向
+	score -= evaluateDirection(curr, opponentTag, 1, 0)  // 垂直方向
+	score -= evaluateDirection(curr, opponentTag, 1, 1)  // 正斜方向
+	score -= evaluateDirection(curr, opponentTag, -1, 1) // 反斜方向
+
+	return score
+}
+
+var countToScore = map[int]float64{
+	1: 0.1,
+	2: 1,
+	3: 10,
+	4: 1000,
+}
+
+// 评估某个方向上的得分
+func evaluateDirection(curr [][]*core.PlaySignal, tag string, dx, dy int) float64 {
+	var score float64
+	rows, cols := len(curr), len(curr[0])
+	for i := 0; i < rows; i++ {
+		for j := 0; j < cols; j++ {
+			if curr[i][j] != nil && curr[i][j].Tag == tag {
+				// 找到了当前执子方的棋子
+				count := 1
+				// 统计连续的相同颜色的棋子数
+				for k := 1; k < 5; k++ {
+					x, y := i+k*dx, j+k*dy
+					if x < 0 || x >= rows || y < 0 || y >= cols {
+						break
+					}
+					if curr[x][y] == nil || curr[x][y].Tag != tag {
+						break
+					}
+					count++
+				}
+				// 根据连续相同颜色的棋子数计算得分
+				if s, ok := countToScore[count]; ok {
+					score += s
 				}
 			}
 		}
 	}
-
-	// 计算当前局面得分
-	score := 0
-	if tag == "X" {
-		score = xCount - oCount
-	} else {
-		score = oCount - xCount
-	}
-
-	// 加上特殊位置得分
-	specialScores := map[[2]int]int{
-		{7, 7}: 50, {7, 8}: 50, {8, 7}: 50, {8, 8}: 50, // 四个角
-		{6, 7}: 10, {7, 6}: 10, {7, 9}: 10, {9, 7}: 10, {8, 8}: 10, // 中心点和中心点周围
-		{6, 6}: 5, {6, 8}: 5, {8, 6}: 5, {8, 9}: 5, {9, 6}: 5, {9, 8}: 5, // 四个边角和边角周围
-	}
-	for pos, s := range specialScores {
-		if curr[pos[0]][pos[1]] != nil && curr[pos[0]][pos[1]].Tag == tag {
-			score += s
-		}
-	}
-
-	return float64(score)
+	return score
 }
